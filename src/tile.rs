@@ -12,16 +12,94 @@ pub trait Unicode {
 pub struct TileId {
     uid: u8,
 }
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct TileFace(pub(crate) u8);
 impl TileFace {
-    fn is_suit(&self) -> bool {
-        
+    pub const fn const_from_char(c: char) -> Self {
+        let face = c as u32 - START as u32;
+        TileFace(face as u8)
+    }
+
+    pub const fn try_into_suit(self) -> Option<Suit> {
+        match self {
+            TileFace(0x00..=0x08) => Some(Suit {
+                kind: SuitKind::Bamboo,
+                num: Num::const_from_u8(self.0 + 0x01),
+            }),
+            TileFace(0x09..=0x11) => Some(Suit {
+                kind: SuitKind::Character,
+                num: Num::const_from_u8(self.0 - 0x09),
+            }),
+            TileFace(0x12..=0x1A) => Some(Suit {
+                kind: SuitKind::Dot,
+                num: Num::const_from_u8(self.0 - 0x12),
+            }),
+            _ => None,
+        }
+    }
+
+    pub const fn try_into_honer(self) -> Option<Honer> {
+        match self {
+            EAST => Some(Honer::Wind(Wind::East)),
+            SOUTH => Some(Honer::Wind(Wind::South)),
+            WEST => Some(Honer::Wind(Wind::West)),
+            NORTH => Some(Honer::Wind(Wind::North)),
+            RED => Some(Honer::Dragon(Dragon::Red)),
+            GREEN => Some(Honer::Dragon(Dragon::Green)),
+            WHITE => Some(Honer::Dragon(Dragon::White)),
+            _ => None,
+        }
     }
 }
 
-
+macro_rules! const_tiles {
+    (
+        $(
+            $name:ident: $face:literal
+        )*
+    ) => {
+        $(
+            pub const $name: TileFace = TileFace::const_from_char($face);
+        )*
+    };
+}
+const_tiles! {
+    B1: '🀐'
+    B2: '🀑'
+    B3: '🀒'
+    B4: '🀓'
+    B5: '🀔'
+    B6: '🀕'
+    B7: '🀖'
+    B8: '🀗'
+    B9: '🀘'
+    C1: '🀇'
+    C2: '🀈'
+    C3: '🀉'
+    C4: '🀊'
+    C5: '🀋'
+    C6: '🀌'
+    C7: '🀍'
+    C8: '🀎'
+    C9: '🀏'
+    D1: '🀙'
+    D2: '🀚'
+    D3: '🀛'
+    D4: '🀜'
+    D5: '🀝'
+    D6: '🀞'
+    D7: '🀟'
+    D8: '🀠'
+    D9: '🀡'
+    EAST: '🀀'
+    SOUTH: '🀁'
+    WEST: '🀂'
+    NORTH: '🀃'
+    RED: '🀄'
+    GREEN: '🀅'
+    WHITE: '🀆'
+}
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[repr(transparent)]
 pub struct TileIndex(pub(crate) u8);
@@ -29,8 +107,7 @@ const START: char = '\u{1F000}';
 
 impl From<char> for TileFace {
     fn from(c: char) -> Self {
-        let face = c as u32 - START as u32;
-        TileFace(face as u8)
+        Self::const_from_char(c)
     }
 }
 
@@ -69,6 +146,23 @@ pub enum Num {
     N9 = 9,
 }
 
+impl Num {
+    pub const fn const_from_u8(n: u8) -> Self {
+        match n {
+            1 => Num::N1,
+            2 => Num::N2,
+            3 => Num::N3,
+            4 => Num::N4,
+            5 => Num::N5,
+            6 => Num::N6,
+            7 => Num::N7,
+            8 => Num::N8,
+            9 => Num::N9,
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Honer {
     Wind(Wind),
@@ -98,9 +192,9 @@ impl Unicode for Suit {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SuitKind {
-    Dot,
     Bamboo,
     Character,
+    Dot,
 }
 
 impl SuitKind {

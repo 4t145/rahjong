@@ -8,10 +8,6 @@ impl Hand {
     pub fn sort(&mut self) {
         self.tiles.sort();
     }
-    pub fn check_chow(&self, tile: TileId) {
-        // find prev and next
-        self.tiles.binary_search(x)
-    }
 }
 
 pub struct MeldedSet {
