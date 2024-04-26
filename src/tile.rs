@@ -1,18 +1,20 @@
 pub trait Unicode {
     fn unicode(&self) -> char;
 }
+pub mod tile_array;
+pub mod tile_set;
 
 ///
 ///```text
 /// 0x____000000____00
 ///       uc_bias   idx
 ///```
-#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct TileId {
     uid: u8,
 }
-#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct TileFace(pub(crate) u8);
 impl TileFace {
@@ -20,7 +22,12 @@ impl TileFace {
         let face = c as u32 - START as u32;
         TileFace(face as u8)
     }
-
+    pub const fn from_suit(suit: Suit) -> Self {
+        let kind = suit.kind;
+        let num = suit.num;
+        let face = kind.unicode_start() as u32 + num as u32 - 1;
+        TileFace(face as u8)
+    }
     pub const fn try_into_suit(self) -> Option<Suit> {
         match self {
             TileFace(0x00..=0x08) => Some(Suit {
@@ -49,6 +56,33 @@ impl TileFace {
             GREEN => Some(Honer::Dragon(Dragon::Green)),
             WHITE => Some(Honer::Dragon(Dragon::White)),
             _ => None,
+        }
+    }
+
+    pub fn is_terminal(&self) -> bool {
+        self.is_honor()
+            || self
+                .try_into_suit()
+                .is_some_and(|s| s.num == Num::N1 || s.num == Num::N9)
+    }
+
+    pub const fn is_honor(&self) -> bool {
+        self.try_into_honer().is_some()
+    }
+
+    pub const fn from_honer(honer: Honer) -> Self {
+        match honer {
+            Honer::Wind(w) => match w {
+                Wind::East => EAST,
+                Wind::South => SOUTH,
+                Wind::West => WEST,
+                Wind::North => NORTH,
+            },
+            Honer::Dragon(d) => match d {
+                Dragon::Red => RED,
+                Dragon::Green => GREEN,
+                Dragon::White => WHITE,
+            },
         }
     }
 }
@@ -103,6 +137,16 @@ const_tiles! {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[repr(transparent)]
 pub struct TileIndex(pub(crate) u8);
+
+impl TileIndex {
+    pub const fn const_from_u8(idx: u8) -> Self {
+        TileIndex(idx % 4)
+    }
+    pub const T0: TileIndex = TileIndex(0);
+    pub const T1: TileIndex = TileIndex(1);
+    pub const T2: TileIndex = TileIndex(2);
+    pub const T3: TileIndex = TileIndex(3);
+}
 const START: char = '\u{1F000}';
 
 impl From<char> for TileFace {
@@ -118,14 +162,24 @@ impl From<TileFace> for char {
 }
 
 impl TileId {
+    pub const fn into_inner(self) -> u8 {
+        self.uid
+    }
+    pub const fn from_inner(inner: u8) -> Self {
+        Self { uid: inner }
+    }
     pub const fn from_face_idx(face: TileFace, idx: TileIndex) -> Self {
         let uid = face.0 << 2 | idx.0;
         TileId { uid }
     }
-    pub const fn into_face_idx(&self) -> (TileFace, TileIndex) {
+    pub const fn into_face_idx(self) -> (TileFace, TileIndex) {
         let face = (self.uid & 0b1111_1100) >> 2;
         let idx = self.uid & 0b0000_0011;
         (TileFace(face), TileIndex(idx))
+    }
+    pub const fn face(self) -> TileFace {
+        let face = (self.uid & 0b1111_1100) >> 2;
+        TileFace(face)
     }
     pub fn unicode(&self) -> char {
         let (face, _) = self.into_face_idx();
@@ -147,6 +201,52 @@ pub enum Num {
 }
 
 impl Num {
+    pub const fn prev_and_next(self) -> Option<(Num, Num)> {
+        match self {
+            Num::N1 => None,
+            Num::N9 => None,
+            _ => {
+                let n = self as u8;
+                Some((Num::const_from_u8(n - 1), Num::const_from_u8(n + 1)))
+            }
+        }
+    }
+    pub const fn next(self) -> Option<Num> {
+        match self {
+            Num::N9 => None,
+            _ => {
+                let n = self as u8;
+                Some(Num::const_from_u8(n + 1))
+            }
+        }
+    }
+    pub const fn next_two(self) -> Option<(Num, Num)> {
+        match self {
+            Num::N8 | Num::N9 => Some((Num::N1, Num::N2)),
+            _ => {
+                let n = self as u8;
+                Some((Num::const_from_u8(n + 1), Num::const_from_u8(n + 2)))
+            }
+        }
+    }
+    pub const fn prev(self) -> Option<Num> {
+        match self {
+            Num::N1 => None,
+            _ => {
+                let n = self as u8;
+                Some(Num::const_from_u8(n - 1))
+            }
+        }
+    }
+    pub const fn prev_two(self) -> Option<(Num, Num)> {
+        match self {
+            Num::N1 | Num::N2 => None,
+            _ => {
+                let n = self as u8;
+                Some((Num::const_from_u8(n - 1), Num::const_from_u8(n - 2)))
+            }
+        }
+    }
     pub const fn const_from_u8(n: u8) -> Self {
         match n {
             1 => Num::N1,
@@ -180,8 +280,14 @@ impl Unicode for Honer {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Suit {
-    kind: SuitKind,
-    num: Num,
+    pub kind: SuitKind,
+    pub num: Num,
+}
+
+impl From<Suit> for TileFace {
+    fn from(suit: Suit) -> Self {
+        TileFace::from_suit(suit)
+    }
 }
 
 impl Unicode for Suit {
