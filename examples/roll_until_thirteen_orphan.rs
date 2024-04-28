@@ -1,4 +1,5 @@
 use rahjong::{hand::Hand, rules::jp::GameRound, tile::*};
+use rand::SeedableRng;
 
 fn main() {
     use std::sync::mpsc::channel;
@@ -18,7 +19,7 @@ fn main() {
                     Wind::East,
                     Wind::East,
                     counter,
-                    rand::rngs::ThreadRng::default(),
+                    rand::rngs::StdRng::from_entropy()
                 );
                 let hand = &round.deck(Wind::East).hand;
 
@@ -27,29 +28,25 @@ fn main() {
                 }
                 counter += 1;
                 if counter % EPOCH == 0 {
-                    tx.send(());
+                    tx.send(()).expect("Failed to send signal");
                 };
             };
-            hand_tx.send(hand);
+            hand_tx.send(hand).expect("Failed to send result");
         });
         rolls.push(handle);
     }
     let output = std::thread::spawn(move || {
         let mut count = 0;
         while let Ok(_) = rx.recv() {
-            count += EPOCH;
-            if count % EPOCH == 0 {
-                let million = count / EPOCH;
-                // println!("Total Round: {million} {EPOCH_NAME}");
-            }
+            count += 1;
+            println!("Total Round: {count} {EPOCH_NAME}");
         }
 
         println!("Total Round: {count}");
     });
     let hand = hand_rx.recv().unwrap();
-    
-    output.join().unwrap();
     println!("Hand: {hand}");
+
 }
 
 #[test]
