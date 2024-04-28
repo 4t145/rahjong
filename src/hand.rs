@@ -1,5 +1,8 @@
-use crate::tile::{tile_set::TileSet, Num, Suit, TileFace, TileId};
-#[derive(Default)]
+use crate::tile::{
+    tile_set::{TileIndexSet, TileSet},
+    Num, Suit, TileFace, TileId,
+};
+#[derive(Debug, Default, Clone)]
 pub struct Hand {
     tiles: TileSet,
 }
@@ -12,27 +15,60 @@ pub enum ReadyHand {
 
 impl Hand {
     pub fn can_thirteen_orphans(&self) -> bool {
-        let mut orphans = TileSet::new();
+        let mut stat = [0; 13];
+        let index = |face: TileFace| -> Option<usize> {
+            match face {
+                crate::tile::RED => Some(0),
+                crate::tile::GREEN => Some(1),
+                crate::tile::WHITE => Some(2),
+                crate::tile::EAST => Some(3),
+                crate::tile::SOUTH => Some(4),
+                crate::tile::WEST => Some(5),
+                crate::tile::NORTH => Some(6),
+                crate::tile::B1 => Some(7),
+                crate::tile::B9 => Some(8),
+                crate::tile::C1 => Some(9),
+                crate::tile::C9 => Some(10),
+                crate::tile::D1 => Some(11),
+                crate::tile::D9 => Some(12),
+                _ => None,
+            }
+        };
+
         for tile in self.tiles.iter() {
-            if tile.face().is_terminal() {
-                orphans.insert(tile);
+            let Some(idx) = index(tile.face()) else {
+                return false;
+            };
+            stat[idx] += 1;
+            if stat[idx] > 2 {
+                return false;
             }
         }
-        orphans.len() == 13
+        let mut zero_count = 0;
+        for count in stat.iter() {
+            if *count == 0 {
+                zero_count += 1;
+                if zero_count > 1 {
+                    return false;
+                }
+            }
+        }
+        zero_count <= 1
     }
 
     pub fn can_seven_pairs(&self) -> bool {
-        let mut pairs = 0;
+        let mut pairs = TileSet::new();
+
         for tile in self.tiles.iter() {
             if self.tiles.count_face(tile.face()) == 2 {
-                pairs += 1;
+                pairs.insert(tile)
             }
         }
-        pairs == 7
+        pairs.len() == 12
     }
-    pub fn new() -> Self {
+    pub fn new(iter: impl IntoIterator<Item = TileId>) -> Self {
         Hand {
-            tiles: TileSet::new(),
+            tiles: iter.into_iter().collect(),
         }
     }
 
@@ -66,10 +102,14 @@ impl Hand {
             let kind = suit.kind;
             let mut chows = Vec::new();
             let chow = |(a, b): (Num, Num)| {
-                let tiles = [Suit { kind, num: a }.into(), Suit { kind, num: b }.into()];
+                let face_a: TileFace = Suit { kind, num: a }.into();
+                let face_b: TileFace = Suit { kind, num: b }.into();
+                let idx_set_a = self.tiles.get_face(face_a);
+                let idx_set_b = self.tiles.get_face(face_b);
+
                 Chow {
-                    claim: claim.face(),
-                    tiles,
+                    claim,
+                    tiles: [(face_a, idx_set_a), (face_b, idx_set_b)],
                 }
             };
             if let Some((a, b)) = num.next_two() {
@@ -100,29 +140,50 @@ impl Hand {
     }
 }
 
+#[derive(Debug, Default, Clone)]
 pub struct MeldedSet {
     pub chow: Vec<Chow>,
     pub pong: Vec<Pong>,
     pub kong: Vec<Kong>,
 }
 
-pub struct Chow {
-    pub claim: TileFace,
-    pub tiles: [TileFace; 2],
+impl MeldedSet {
+    pub fn new() -> Self {
+        MeldedSet {
+            chow: Vec::new(),
+            pong: Vec::new(),
+            kong: Vec::new(),
+        }
+    }
 }
+#[derive(Debug, Clone)]
+pub struct Chow {
+    pub claim: TileId,
+    pub tiles: [(TileFace, TileIndexSet); 2],
+}
+#[derive(Debug, Clone)]
 
 pub struct Pong {
-    pub claim: TileFace,
-    pub tiles: [TileFace; 2],
+    pub claim: TileId,
+    pub tiles: [TileId; 2],
 }
+#[derive(Debug, Clone)]
 
 pub struct Kong {
-    pub claim: TileFace,
-    pub tiles: [TileFace; 3],
+    pub claim: TileId,
     pub exposed: bool,
 }
-
+#[derive(Debug, Default, Clone)]
 pub struct Deck {
     pub hand: Hand,
     pub melded_set: MeldedSet,
+}
+
+impl std::fmt::Display for Hand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for tile in self.tiles.iter() {
+            write!(f, "{}", tile.face().unicode())?;
+        }
+        Ok(())
+    }
 }

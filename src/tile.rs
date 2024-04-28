@@ -9,15 +9,35 @@ pub mod tile_set;
 /// 0x____000000____00
 ///       uc_bias   idx
 ///```
-#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct TileId {
     uid: u8,
 }
-#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
+
+impl std::fmt::Debug for TileId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (face, idx) = self.into_face_idx();
+        write!(f, "{:?}{:?}", face, idx)
+    }
+}
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct TileFace(pub(crate) u8);
+
+impl std::fmt::Debug for TileFace {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let c: char = (*self).into();
+        write!(f, "{}", c)
+    }
+}
 impl TileFace {
+    pub const fn into_inner(self) -> u8 {
+        self.0
+    }
+    pub fn unicode(&self) -> char {
+        unsafe { char::from_u32_unchecked(START as u32 + self.0 as u32) }
+    }
     pub const fn const_from_char(c: char) -> Self {
         let face = c as u32 - START as u32;
         TileFace(face as u8)
@@ -28,19 +48,23 @@ impl TileFace {
         let face = kind.unicode_start() as u32 + num as u32 - 1;
         TileFace(face as u8)
     }
+    pub const fn from_honor(honor: Honer) -> Self {
+        let face = honor.unicode() as u32 - START as u32;
+        TileFace(face as u8)
+    }
     pub const fn try_into_suit(self) -> Option<Suit> {
         match self {
-            TileFace(0x00..=0x08) => Some(Suit {
+            TileFace(16..=24) => Some(Suit {
                 kind: SuitKind::Bamboo,
-                num: Num::const_from_u8(self.0 + 0x01),
+                num: Num::const_from_u8(self.0 - 15),
             }),
-            TileFace(0x09..=0x11) => Some(Suit {
+            TileFace(7..=15) => Some(Suit {
                 kind: SuitKind::Character,
-                num: Num::const_from_u8(self.0 - 0x09),
+                num: Num::const_from_u8(self.0 - 6),
             }),
-            TileFace(0x12..=0x1A) => Some(Suit {
+            TileFace(25..=33) => Some(Suit {
                 kind: SuitKind::Dot,
-                num: Num::const_from_u8(self.0 - 0x12),
+                num: Num::const_from_u8(self.0 - 24),
             }),
             _ => None,
         }
@@ -87,6 +111,11 @@ impl TileFace {
     }
 }
 
+impl From<Honer> for TileFace {
+    fn from(honer: Honer) -> Self {
+        TileFace::from_honor(honer)
+    }
+}
 macro_rules! const_tiles {
     (
         $(
@@ -135,17 +164,52 @@ const_tiles! {
     WHITE: '🀆'
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-#[repr(transparent)]
-pub struct TileIndex(pub(crate) u8);
+pub enum TileIndex {
+    T0 = 0b0001,
+    T1 = 0b0010,
+    T2 = 0b0100,
+    T3 = 0b1000,
+}
 
 impl TileIndex {
-    pub const fn const_from_u8(idx: u8) -> Self {
-        TileIndex(idx % 4)
+    pub fn enumerate() -> <[Self; 4] as IntoIterator>::IntoIter {
+        [TileIndex::T0, TileIndex::T1, TileIndex::T2, TileIndex::T3].into_iter()
     }
-    pub const T0: TileIndex = TileIndex(0);
-    pub const T1: TileIndex = TileIndex(1);
-    pub const T2: TileIndex = TileIndex(2);
-    pub const T3: TileIndex = TileIndex(3);
+    pub const unsafe fn const_from_mask(idx: u8) -> Self {
+        std::mem::transmute(idx)
+    }
+    pub const fn const_into_mask(self) -> u8 {
+        self as u8
+    }
+    #[inline]
+    pub const fn const_from_u8(idx: u8) -> Self {
+        [TileIndex::T0, TileIndex::T1, TileIndex::T2, TileIndex::T3][(idx % 4) as usize]
+    }
+    #[inline]
+    pub const fn const_into_u8(self) -> u8 {
+        match self {
+            TileIndex::T0 => 0,
+            TileIndex::T1 => 1,
+            TileIndex::T2 => 2,
+            TileIndex::T3 => 3,
+        }
+    }
+    pub const fn next(self) -> Option<Self> {
+        match self {
+            TileIndex::T0 => Some(TileIndex::T1),
+            TileIndex::T1 => Some(TileIndex::T2),
+            TileIndex::T2 => Some(TileIndex::T3),
+            TileIndex::T3 => None,
+        }
+    }
+    pub const fn prev(self) -> Option<Self> {
+        match self {
+            TileIndex::T3 => Some(TileIndex::T2),
+            TileIndex::T2 => Some(TileIndex::T1),
+            TileIndex::T1 => Some(TileIndex::T0),
+            TileIndex::T0 => None,
+        }
+    }
 }
 const START: char = '\u{1F000}';
 
@@ -169,13 +233,13 @@ impl TileId {
         Self { uid: inner }
     }
     pub const fn from_face_idx(face: TileFace, idx: TileIndex) -> Self {
-        let uid = face.0 << 2 | idx.0;
+        let uid = face.0 << 2 | idx.const_into_u8();
         TileId { uid }
     }
     pub const fn into_face_idx(self) -> (TileFace, TileIndex) {
         let face = (self.uid & 0b1111_1100) >> 2;
         let idx = self.uid & 0b0000_0011;
-        (TileFace(face), TileIndex(idx))
+        (TileFace(face), TileIndex::const_from_u8(idx))
     }
     pub const fn face(self) -> TileFace {
         let face = (self.uid & 0b1111_1100) >> 2;
@@ -201,6 +265,20 @@ pub enum Num {
 }
 
 impl Num {
+    pub fn enumerate() -> <[Self; 9] as IntoIterator>::IntoIter {
+        [
+            Num::N1,
+            Num::N2,
+            Num::N3,
+            Num::N4,
+            Num::N5,
+            Num::N6,
+            Num::N7,
+            Num::N8,
+            Num::N9,
+        ]
+        .into_iter()
+    }
     pub const fn prev_and_next(self) -> Option<(Num, Num)> {
         match self {
             Num::N1 => None,
@@ -269,6 +347,27 @@ pub enum Honer {
     Dragon(Dragon),
 }
 
+impl Honer {
+    pub fn enumerate() -> <[Self; 7] as IntoIterator>::IntoIter {
+        [
+            Honer::Wind(Wind::East),
+            Honer::Wind(Wind::South),
+            Honer::Wind(Wind::West),
+            Honer::Wind(Wind::North),
+            Honer::Dragon(Dragon::Red),
+            Honer::Dragon(Dragon::Green),
+            Honer::Dragon(Dragon::White),
+        ]
+        .into_iter()
+    }
+    const fn unicode(&self) -> char {
+        match self {
+            Honer::Wind(w) => w.unicode(),
+            Honer::Dragon(d) => d.unicode(),
+        }
+    }
+}
+
 impl Unicode for Honer {
     fn unicode(&self) -> char {
         match self {
@@ -304,6 +403,9 @@ pub enum SuitKind {
 }
 
 impl SuitKind {
+    pub fn enumerate() -> <[Self; 3] as IntoIterator>::IntoIter {
+        [SuitKind::Dot, SuitKind::Bamboo, SuitKind::Character].into_iter()
+    }
     pub const fn unicode_start(&self) -> char {
         match self {
             SuitKind::Dot => '🀙',
@@ -320,8 +422,11 @@ pub enum Dragon {
     White,
 }
 
-impl Unicode for Dragon {
-    fn unicode(&self) -> char {
+impl Dragon {
+    pub fn enumerate() -> <[Self; 3] as IntoIterator>::IntoIter {
+        [Dragon::Red, Dragon::Green, Dragon::White].into_iter()
+    }
+    pub const fn unicode(self) -> char {
         match self {
             Dragon::Red => '🀄',
             Dragon::Green => '🀅',
@@ -338,8 +443,19 @@ pub enum Wind {
     North,
 }
 
-impl Unicode for Wind {
-    fn unicode(&self) -> char {
+impl Wind {
+    pub const fn as_index(&self) -> usize {
+        match self {
+            Wind::East => 0,
+            Wind::South => 1,
+            Wind::West => 2,
+            Wind::North => 3,
+        }
+    }
+    pub fn enumerate() -> <[Self; 4] as IntoIterator>::IntoIter {
+        [Wind::East, Wind::South, Wind::West, Wind::North].into_iter()
+    }
+    const fn unicode(self) -> char {
         match self {
             Wind::East => '🀀',
             Wind::South => '🀁',
