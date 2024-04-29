@@ -98,6 +98,18 @@ impl<S, R> std::fmt::Display for Wall<S, R> {
     }
 }
 
+pub trait AsyncWall {
+    type Error: std::error::Error + 'static;
+    fn draw_next(
+        &mut self,
+    ) -> impl std::future::Future<Output = Result<Option<TileId>, Self::Error>> + Send + 'static;
+    fn draw_next_n<const N: usize>(
+        &mut self,
+    ) -> impl std::future::Future<Output = Result<[TileId; N], Self::Error>> + Send + 'static;
+    fn get_size(
+        &self,
+    ) -> impl std::future::Future<Output = Result<usize, Self::Error>> + Send + 'static;
+}
 #[test]
 fn test_game() {
     let mut wall = Wall::new(crate::rules::jp::Jp, rand::rngs::ThreadRng::default());

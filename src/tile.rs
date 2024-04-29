@@ -455,6 +455,14 @@ impl Wind {
     pub fn enumerate() -> <[Self; 4] as IntoIterator>::IntoIter {
         [Wind::East, Wind::South, Wind::West, Wind::North].into_iter()
     }
+    pub fn iter_from(self) -> impl Iterator<Item = Wind> + Clone {
+        match self {
+            Wind::East => [Wind::East, Wind::South, Wind::West, Wind::North].into_iter(),
+            Wind::South => [Wind::South, Wind::West, Wind::North, Wind::East].into_iter(),
+            Wind::West => [Wind::West, Wind::North, Wind::East, Wind::South].into_iter(),
+            Wind::North => [Wind::North, Wind::East, Wind::South, Wind::West].into_iter(),
+        }
+    }
     const fn unicode(self) -> char {
         match self {
             Wind::East => '🀀',

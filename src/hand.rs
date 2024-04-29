@@ -1,6 +1,9 @@
-use crate::tile::{
-    tile_set::{TileIndexSet, TileSet},
-    Num, Suit, TileFace, TileId,
+use crate::{
+    discard::Discard,
+    tile::{
+        tile_set::{TileIndexSet, TileSet},
+        Num, Suit, TileFace, TileId,
+    },
 };
 #[derive(Debug, Default, Clone)]
 pub struct Hand {
@@ -72,11 +75,11 @@ impl Hand {
         }
     }
 
-    pub fn can_pong(&self, claim: TileId) -> bool {
+    pub fn can_peng(&self, claim: TileId) -> bool {
         self.tiles.count_face(claim.face()) >= 2
     }
 
-    pub fn can_chow(&self, claim: TileId) -> bool {
+    pub fn can_chi(&self, claim: TileId) -> bool {
         if let Some(suit) = claim.face().try_into_suit() {
             let num = suit.num;
             let kind = suit.kind;
@@ -92,22 +95,22 @@ impl Hand {
         }
     }
 
-    pub fn can_kong(&self, claim: TileId) -> bool {
+    pub fn can_gang(&self, claim: TileId) -> bool {
         self.tiles.count_face(claim.face()) >= 3
     }
 
-    pub fn chow_options(&self, claim: TileId) -> Vec<Chow> {
+    pub fn chi_options(&self, claim: TileId) -> Vec<ChiOptions> {
         if let Some(suit) = claim.face().try_into_suit() {
             let num = suit.num;
             let kind = suit.kind;
-            let mut chows = Vec::new();
-            let chow = |(a, b): (Num, Num)| {
+            let mut chis = Vec::new();
+            let chi = |(a, b): (Num, Num)| {
                 let face_a: TileFace = Suit { kind, num: a }.into();
                 let face_b: TileFace = Suit { kind, num: b }.into();
                 let idx_set_a = self.tiles.get_face(face_a);
                 let idx_set_b = self.tiles.get_face(face_b);
 
-                Chow {
+                ChiOptions {
                     claim,
                     tiles: [(face_a, idx_set_a), (face_b, idx_set_b)],
                 }
@@ -116,24 +119,24 @@ impl Hand {
                 if self.tiles.has_face(Suit { kind, num: a }.into())
                     && self.tiles.has_face(Suit { kind, num: b }.into())
                 {
-                    chows.push(chow((a, b)));
+                    chis.push(chi((a, b)));
                 }
             }
             if let Some((a, b)) = num.prev_two() {
                 if self.tiles.has_face(Suit { kind, num: a }.into())
                     && self.tiles.has_face(Suit { kind, num: b }.into())
                 {
-                    chows.push(chow((a, b)));
+                    chis.push(chi((a, b)));
                 }
             }
             if let Some((a, b)) = num.prev_and_next() {
                 if self.tiles.has_face(Suit { kind, num: a }.into())
                     && self.tiles.has_face(Suit { kind, num: b }.into())
                 {
-                    chows.push(chow((a, b)));
+                    chis.push(chi((a, b)));
                 }
             }
-            chows
+            chis
         } else {
             Vec::new()
         }
@@ -141,42 +144,66 @@ impl Hand {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct MeldedSet {
-    pub chow: Vec<Chow>,
-    pub pong: Vec<Pong>,
-    pub kong: Vec<Kong>,
+pub struct Melded {
+    pub chi: Vec<Chi>,
+    pub peng: Vec<Peng>,
+    pub gang: Vec<Gang>,
 }
 
-impl MeldedSet {
+impl Melded {
     pub fn new() -> Self {
-        MeldedSet {
-            chow: Vec::new(),
-            pong: Vec::new(),
-            kong: Vec::new(),
+        Melded {
+            chi: Vec::new(),
+            peng: Vec::new(),
+            gang: Vec::new(),
         }
     }
 }
 #[derive(Debug, Clone)]
-pub struct Chow {
+pub struct ChiOptions {
     pub claim: TileId,
     pub tiles: [(TileFace, TileIndexSet); 2],
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 
-pub struct Pong {
-    pub claim: TileId,
+pub struct Peng {
+    pub claim: Discard,
     pub tiles: [TileId; 2],
 }
-#[derive(Debug, Clone)]
 
-pub struct Kong {
-    pub claim: TileId,
-    pub exposed: bool,
+#[derive(Debug, Clone, Copy)]
+pub enum Gang {
+    AnGang { displayed: TileId },
+    MingGang { claim: TileId },
+    JiaGang { peng: Peng, claim: TileId },
+}
+
+#[derive(Debug, Clone, Copy)]
+
+pub struct Chi {
+    pub claim: Discard,
+    pub tiles: [TileId; 2],
 }
 #[derive(Debug, Default, Clone)]
 pub struct Deck {
     pub hand: Hand,
-    pub melded_set: MeldedSet,
+    pub melded: Melded,
+}
+
+impl Deck {
+    pub fn chi(&mut self, chi: Chi) -> Result<(), Chi> {
+        if !self.hand.tiles.has(chi.tiles[0]) || !self.hand.tiles.has(chi.tiles[1]) {
+            return Err(chi);
+        }
+
+        self.hand.tiles.remove(chi.tiles[0]);
+        self.hand.tiles.remove(chi.tiles[1]);
+        self.melded.chi.push(chi);
+        Ok(())
+    }
+    pub fn gang(&mut self, gang: Gang) -> Result<(), Gang> {
+        todo!()
+    }
 }
 
 impl std::fmt::Display for Hand {

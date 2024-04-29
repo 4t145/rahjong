@@ -1,7 +1,9 @@
 use rand::{seq::SliceRandom, Rng, SeedableRng};
-
+pub mod player;
+pub mod round;
+pub mod win;
 use crate::{
-    hand::{Deck, Hand},
+    hand::{Chi, Deck, Gang, Hand, Peng},
     tile::{
         self, tile_set::TileSet, Dragon, Honer, Num, Suit, SuitKind, TileFace, TileId, TileIndex,
         Wind, B5, C5, D5,
@@ -62,27 +64,27 @@ impl TileId {
     }
 }
 
-pub struct Player {
+pub struct PlayerInfo {
     pub score: u32,
     pub wind: Wind,
 }
 
 pub struct Game4P<R> {
-    pub players: [Player; 4],
+    pub players: [PlayerInfo; 4],
     pub wall: Wall<Jp, R>,
 }
 #[derive(Debug)]
 pub struct DoraSet {
     indicator: TileId,
-    inner: [TileId; 5],
-    kan_dora: [TileId; 4],
+    ura: [TileId; 5],
+    kan: [TileId; 4],
     rinshan: [TileId; 4],
     kan_index: usize,
 }
 
 impl DoraSet {
     pub fn indicator(&self) -> TileId {
-        self.inner[0]
+        self.ura[0]
     }
     pub fn kan(&mut self) -> Option<TileId> {
         if self.kan_index < 4 {
@@ -94,10 +96,10 @@ impl DoraSet {
         }
     }
     pub fn is_kan_dora_indicator(&self, tile: TileId) -> bool {
-        self.kan_dora[0..self.kan_index].contains(&tile)
+        self.kan[0..self.kan_index].contains(&tile)
     }
     pub fn is_inner_dora_indicator(&self, tile: TileId) -> bool {
-        self.inner.contains(&tile)
+        self.ura.contains(&tile)
     }
     pub fn is_dora_indicator(&self, tile: TileId) -> bool {
         self.indicator == tile
@@ -113,13 +115,21 @@ impl<R> Wall<Jp, R> {
         let outer = [doras[6], doras[7], doras[8], doras[9]];
         let rinshan = [doras[10], doras[11], doras[12], doras[13]];
         DoraSet {
-            inner,
-            kan_dora: outer,
+            ura: inner,
+            kan: outer,
             rinshan,
             indicator,
             kan_index: 0,
         }
     }
+}
+
+pub struct Win {}
+
+impl Deck {
+    // pub fn can_win(&self, tile: TileId) -> bool {
+
+    // }
 }
 
 #[derive(Debug)]
@@ -131,7 +141,6 @@ pub struct GameRound<R> {
     pub decks: [Deck; 4],
     pub dora_set: DoraSet,
 }
-
 impl<R> GameRound<R>
 where
     R: Rng,
@@ -144,19 +153,19 @@ where
         let decks = [
             Deck {
                 hand: Hand::new(hands[0]),
-                melded_set: Default::default(),
+                melded: Default::default(),
             },
             Deck {
                 hand: Hand::new(hands[1]),
-                melded_set: Default::default(),
+                melded: Default::default(),
             },
             Deck {
                 hand: Hand::new(hands[2]),
-                melded_set: Default::default(),
+                melded: Default::default(),
             },
             Deck {
                 hand: Hand::new(hands[3]),
-                melded_set: Default::default(),
+                melded: Default::default(),
             },
         ];
         GameRound {
@@ -171,11 +180,45 @@ where
     pub fn deck(&self, wind: Wind) -> &Deck {
         &self.decks[wind.as_index()]
     }
+    pub fn operations(&self, player: Wind) -> Vec<Operation> {
+        vec![]
+    }
+    pub fn apply(&mut self, player: Wind, operation: Operation) -> Result<(), OperationError> {
+        let deck = &mut self.decks[player.as_index()];
+        match operation {
+            Operation::Chi(chi) => deck.chi(chi).map_err(|_| OperationError::MissingTile),
+
+            _ => {
+                todo!()
+            }
+        }
+    }
 }
+
+pub enum Operation {
+    Chi(Chi),
+    Pon(Peng),
+    Kan(Gang),
+    Ron(TileId),
+    Tsumo,
+    Draw,
+}
+pub enum OperationError {
+    MissingTile,
+    Unable,
+}
+
+pub enum PlayerState {
+    DrawAndDiscard(TileId),
+    End,
+    OthersTurn,
+}
+
+
 
 #[test]
 fn test_new_round() {
     let rng = rand::thread_rng();
-    let mut round = GameRound::new(Wind::East, Wind::East, 1, rng);
+    let round = GameRound::new(Wind::East, Wind::East, 1, rng);
     dbg!(round);
 }
