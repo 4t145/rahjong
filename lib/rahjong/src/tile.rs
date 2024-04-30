@@ -264,6 +264,12 @@ pub enum Num {
     N9 = 9,
 }
 
+impl std::fmt::Display for Num {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", *self as u8)
+    }
+}
+
 impl Num {
     pub fn enumerate() -> <[Self; 9] as IntoIterator>::IntoIter {
         [

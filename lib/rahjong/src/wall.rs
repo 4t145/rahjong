@@ -19,6 +19,9 @@ where
     }
 }
 impl<S: Tiles, R> Wall<S, R> {
+    pub fn len(&self) -> usize {
+        self.size
+    }
     pub fn new(set: S, rng: R) -> Self {
         let tiles = set.new_wall();
         Wall {
@@ -71,7 +74,7 @@ impl<S: Tiles, R> Wall<S, R> {
         for i in 0..I_COUNT {
             for hand in &mut hands {
                 if let Some(tile) = self.draw_next() {
-                    hand[i] = tile;
+                    hand[i] = tile.into_tile();
                 }
             }
         }

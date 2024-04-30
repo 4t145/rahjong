@@ -11,4 +11,7 @@ impl Draw {
     pub fn tile(&self) -> TileId {
         self.tile
     }
+    pub fn into_tile(self) -> TileId {
+        self.tile
+    }
 }

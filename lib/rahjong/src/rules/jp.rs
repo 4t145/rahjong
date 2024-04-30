@@ -1,7 +1,7 @@
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 pub mod player;
-pub mod round;
 pub mod riichi;
+pub mod round;
 pub mod win;
 use crate::{
     hand::{Chi, Deck, Gang, Hand, Peng},
@@ -87,6 +87,11 @@ impl DoraSet {
     pub fn indicator(&self) -> TileId {
         self.ura[0]
     }
+    pub fn shown_indicators(&self) -> Vec<TileId> {
+        let mut v = vec![self.indicator];
+        v.extend_from_slice(&self.ura[0..self.kan_index]);
+        v
+    }
     pub fn kan(&mut self) -> Option<TileId> {
         if self.kan_index < 4 {
             let tile = self.rinshan[self.kan_index];
@@ -124,7 +129,6 @@ impl<R> Wall<Jp, R> {
         }
     }
 }
-
 
 impl Deck {
     // pub fn can_win(&self, tile: TileId) -> bool {
@@ -213,8 +217,6 @@ pub enum PlayerState {
     End,
     OthersTurn,
 }
-
-
 
 #[test]
 fn test_new_round() {

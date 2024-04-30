@@ -6,6 +6,13 @@ use crate::{
 pub struct Player {
     wind: Wind,
 }
+impl Player {
+    pub const EAST: Player = Player { wind: Wind::East };
+    pub const SOUTH: Player = Player { wind: Wind::South };
+    pub const WEST: Player = Player { wind: Wind::West };
+    pub const NORTH: Player = Player { wind: Wind::North };
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub struct WindSet<T> {
     set: [T; 4],
@@ -22,6 +29,24 @@ impl<T> WindSet<T> {
     }
     pub fn get_mut<W: Into<Wind>>(&mut self, wind: W) -> &mut T {
         &mut self.set[wind.into() as usize]
+    }
+    pub fn insert<W: Into<Wind>>(&mut self, wind: W, value: T) {
+        self.set[wind.into() as usize] = value;
+    }
+}
+
+impl<P, T> FromIterator<(P, T)> for WindSet<T>
+where
+    P: Into<Player>,
+    T: Default,
+{
+    fn from_iter<I: IntoIterator<Item = (P, T)>>(iter: I) -> Self {
+        let mut set: [T; 4] = Default::default();
+        for (player, value) in iter {
+            let player: Player = player.into();
+            set[player.wind.as_index()] = value;
+        }
+        WindSet { set }
     }
 }
 

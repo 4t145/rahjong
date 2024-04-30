@@ -7,7 +7,7 @@ use crate::{
 };
 #[derive(Debug, Default, Clone)]
 pub struct Hand {
-    tiles: TileSet,
+    pub tiles: TileSet,
 }
 
 pub enum ReadyHand {
@@ -22,6 +22,9 @@ impl Hand {
     }
     pub fn remove(&mut self, tile: TileId) {
         self.tiles.remove(tile);
+    }
+    pub fn len(&self) -> usize {
+        self.tiles.len()
     }
     pub fn can_thirteen_orphans(&self) -> bool {
         let mut stat = [0; 13];

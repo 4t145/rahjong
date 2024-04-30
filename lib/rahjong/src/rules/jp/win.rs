@@ -18,7 +18,7 @@ pub struct Ron {
 }
 #[derive(Debug, Clone)]
 
-pub struct ChanKan {
+pub struct Chankan {
     pub tile: TileId,
     pub from: Player,
 }
