@@ -17,6 +17,12 @@ pub enum ReadyHand {
 }
 
 impl Hand {
+    pub fn contains(&self, tile: TileId) -> bool {
+        self.tiles.has(tile)
+    }
+    pub fn remove(&mut self, tile: TileId) {
+        self.tiles.remove(tile);
+    }
     pub fn can_thirteen_orphans(&self) -> bool {
         let mut stat = [0; 13];
         let index = |face: TileFace| -> Option<usize> {

@@ -437,13 +437,22 @@ impl Dragon {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Wind {
-    East,
-    South,
-    West,
-    North,
+    East = 0,
+    South = 1,
+    West = 2,
+    North = 3,
 }
 
 impl Wind {
+    pub fn from_index(idx: usize) -> Self {
+        match idx {
+            0 => Wind::East,
+            1 => Wind::South,
+            2 => Wind::West,
+            3 => Wind::North,
+            _ => unreachable!(),
+        }
+    }
     pub const fn as_index(&self) -> usize {
         match self {
             Wind::East => 0,
@@ -463,12 +472,20 @@ impl Wind {
             Wind::North => [Wind::North, Wind::East, Wind::South, Wind::West].into_iter(),
         }
     }
-    const fn unicode(self) -> char {
+    pub const fn unicode(self) -> char {
         match self {
             Wind::East => '🀀',
             Wind::South => '🀁',
             Wind::West => '🀂',
             Wind::North => '🀃',
+        }
+    }
+    pub const fn next(self) -> Self {
+        match self {
+            Wind::East => Wind::South,
+            Wind::South => Wind::West,
+            Wind::West => Wind::North,
+            Wind::North => Wind::East,
         }
     }
 }

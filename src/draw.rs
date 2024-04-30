@@ -1,5 +1,14 @@
 use crate::tile::TileId;
-#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 pub struct Draw {
     tile: TileId
+}
+
+impl Draw {
+    pub fn new(tile: TileId) -> Self {
+        Draw { tile }
+    }
+    pub fn tile(&self) -> TileId {
+        self.tile
+    }
 }

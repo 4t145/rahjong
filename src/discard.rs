@@ -2,16 +2,16 @@ use crate::{player::Player, tile::TileId};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Discard {
-    from: Player,
+    source: Player,
     tile: TileId,
 }
 
 impl Discard {
     pub fn new(from: Player, tile: TileId) -> Self {
-        Discard { from, tile }
+        Discard { source: from, tile }
     }
-    pub fn from(&self) -> Player {
-        self.from
+    pub fn source(&self) -> Player {
+        self.source
     }
     pub fn tile(&self) -> TileId {
         self.tile

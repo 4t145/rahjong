@@ -1,18 +1,24 @@
-use crate::{hand::Deck, tile::TileId};
+use crate::{draw::Draw, hand::Deck, player::Player, tile::TileId};
 
-pub enum WinKind {
-    Ron,
-    Tsumo,
+#[derive(Debug, Clone)]
+pub enum Win {
+    ChanKan { tile: TileId, from: Player },
+    Ron { discard: TileId },
+    Tsumo { tile: Draw },
 }
-pub struct Win<'d> {
-    deck: &'d Deck,
-    tile: TileId,
-    kind: WinKind,
+#[derive(Debug, Clone)]
+
+pub struct Tsumo {
+    pub tile: Draw,
 }
+#[derive(Debug, Clone)]
 
-pub trait WinCheck {
-    fn check(deck: &Deck, tile: TileId, kind: WinKind) -> bool;
+pub struct Ron {
+    pub discard: TileId,
 }
+#[derive(Debug, Clone)]
 
-
-pub struct Plain;
+pub struct ChanKan {
+    pub tile: TileId,
+    pub from: Player,
+}

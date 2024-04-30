@@ -1,6 +1,6 @@
 use std::usize;
 
-use crate::{tile::TileId, Tiles};
+use crate::{draw::Draw, tile::TileId, Tiles};
 use rand::{seq::SliceRandom, Rng};
 
 pub struct Wall<S, R> {
@@ -28,14 +28,14 @@ impl<S: Tiles, R> Wall<S, R> {
             rng,
         }
     }
-    pub fn draw_next(&mut self) -> Option<TileId> {
+    pub fn draw_next(&mut self) -> Option<Draw> {
         self.size = self.size.saturating_sub(1);
         loop {
             if self.tiles.is_empty() {
                 break None;
             }
             if let Some(next) = self.tiles.pop().flatten() {
-                break Some(next);
+                break Some(Draw::new(next));
             }
         }
     }

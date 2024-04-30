@@ -1,6 +1,7 @@
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 pub mod player;
 pub mod round;
+pub mod riichi;
 pub mod win;
 use crate::{
     hand::{Chi, Deck, Gang, Hand, Peng},
@@ -124,7 +125,6 @@ impl<R> Wall<Jp, R> {
     }
 }
 
-pub struct Win {}
 
 impl Deck {
     // pub fn can_win(&self, tile: TileId) -> bool {
