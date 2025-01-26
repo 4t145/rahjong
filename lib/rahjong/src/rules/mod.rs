@@ -1,6 +1,7 @@
 use crate::{hand::Deck, tile::TileId};
 
 pub mod jp;
+pub mod sc;
 
 
 pub trait Rule {

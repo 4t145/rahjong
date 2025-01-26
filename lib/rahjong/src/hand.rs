@@ -185,6 +185,7 @@ pub enum Gang {
     AnGang { displayed: TileId },
     MingGang { claim: TileId },
     JiaGang { peng: Peng, claim: TileId },
+    Kong { tiles: [TileId; 4] },
 }
 
 #[derive(Debug, Clone, Copy)]

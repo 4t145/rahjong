@@ -1,4 +1,4 @@
 [workspace]
-members = ["binary/server", "binary/tui-client", "lib/rahjong"]
+members = ["binary/server", "binary/tui-client", "lib/rahjong",  "lib/rahjong-model"]
 [workspace.dependencies]
 rahjong = { path = "./lib/rahjong" }

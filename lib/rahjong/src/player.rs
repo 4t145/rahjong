@@ -75,3 +75,9 @@ impl From<Player> for Wind {
         val.wind
     }
 }
+
+
+
+pub trait AsyncPlayer {
+    async fn draw(&self, tile: TileId) -> Draw;
+}

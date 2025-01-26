@@ -272,7 +272,7 @@ fn test_tile_set() {
     }
     for tile in tile_vec.iter() {
         tile_set.remove(*tile);
-        println!("{}", tile.unicode());
+        print!("{}", tile.unicode());
         assert!(!tile_set.has(*tile));
         assert!(tile_vec.contains(tile));
     }
